@@ -105,7 +105,7 @@ def _gen_sql(table_name, mappings):
     sql = ['-- generating SQL for %s:' % table_name, 'create table `%s` (' % table_name]
     for f in sorted(mappings.values(), lambda x, y: cmp(x._order, y._order)):
         if not hasattr(f, 'ddl'):
-            raise StandardError('no ddl in field "%s".' % n)
+            raise StandardError('no ddl in field "%s".' % f)
         ddl = f.ddl
         nullable = f.nullable
         if f.primary_key:
@@ -313,8 +313,44 @@ class Model(dict):
 
 if __name__=='__main__':
     logging.basicConfig(level=logging.DEBUG)
-    db.create_engine('www-data', 'www-data', 'test')
+    db.create_engine('root', '6129544', 'Begin')
     db.update('drop table if exists user')
     db.update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
-    import doctest
-    doctest.testmod()
+    #import doctest
+    #doctest.testmod()
+    class User(Model):
+        id = IntegerField(primary_key=True)
+        name = StringField()
+        email = StringField(updatable=False)
+        passwd = StringField(default=lambda: '******')
+        last_modified = FloatField()
+        def pre_insert(self):
+            self.last_modified = time.time()
+    u = User(id=10190, name='Michael', email='orm@db.org')
+    r = u.insert()
+    print u.email
+    
+    #'orm@db.org'
+    print u.passwd
+    '******'
+    print u.last_modified > (time.time() - 2)
+    f = User.get(10190)
+    f.name
+    #u'Michael'
+    f.email
+    #u'orm@db.org'
+    f.email = 'changed@db.org'
+    r = f.update() # change email but email is non-updatable!
+    print len(User.find_all())
+    '''
+    #1
+    g = User.get(10190)
+    g.email
+    #u'orm@db.org'
+    r = g.delete()
+    print len(db.select('select * from user where id=10190'))
+    #0
+    import json
+    print User().__sql__()
+    '''
+    
